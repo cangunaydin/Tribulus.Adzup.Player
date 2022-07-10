@@ -1,0 +1,134 @@
+﻿@page "/"
+
+@using Microsoft.AspNetCore.Components.Forms
+@using SkiaSharp
+@using SkiaSharp.Views.Blazor
+@using System.IO
+@using Tribulus.Adzup.Player.FFmpeg
+
+<h3>Player</h3>
+
+<div class="row mb-2">
+	<div class="col">
+		<InputFile OnChange="@LoadFiles" multiple />
+	</div>
+</div>
+<div class="row mb-2">
+	<div class="col align-content-center">
+		@if (@videoReader != null && @videoReader.ReadyToReadFrame)
+		{
+			<button @onclick="PlayFile">Play File</button>
+		}
+
+		<button @onclick="CloseFile">Close File</button>
+	</div>
+
+</div>
+<div class="row mb-2">
+	<div class="col">
+		@if (@videoReader != null && @videoReader.ReadyToReadFrame)
+		{
+			<h5>Details</h5>
+			<p>@videoReader.FrameDetails.width x @videoReader.FrameDetails.height</p>
+
+		}
+	</div>
+</div>
+<div class="row mb-2">
+	<div class="col border p-2 canvas-container">
+
+		<SKGLView @ref="glView" OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="false" />
+
+	</div>
+</div>
+
+
+@code {
+	private SKGLView glView;
+	long lastTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+	long startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+	VideoReader videoReader;
+	FrameDetails frameDetails;
+
+	void CloseFile()
+	{
+		videoReader.Close();
+	}
+	void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
+	{
+		if (videoReader == null || !videoReader.ReadyToReadFrame)
+			return;
+
+		// the the canvas and properties
+		var canvas = e.Surface.Canvas;
+		// make sure the canvas is blank
+		canvas.Clear(SKColors.White);
+
+
+
+		using (var data = SKData.CreateCopy(videoReader.FrameBuffer))
+		using (var original = new SKBitmap())
+		{
+			// create a new bitmap using the memory
+			original.InstallPixels(new SKImageInfo(videoReader.FrameDetails.width, videoReader.FrameDetails.height), data.Data);
+
+			using (var resized = original.Resize(new SKImageInfo(1280, 720), SKFilterQuality.Medium))
+			{
+				canvas.DrawBitmap(resized, 0, 0);
+			}
+		}
+
+	}
+
+
+	private async Task LoadFiles(InputFileChangeEventArgs e)
+	{
+		videoReader = new VideoReader();
+		IBrowserFile file = e.File;
+		var videoFileBuffers = new byte[file.Size];
+		await file.OpenReadStream(maxAllowedSize: 104857600).ReadAsync(videoFileBuffers);
+		videoReader.SaveFile(videoFileBuffers, e.File.Name);
+		videoReader.Open();
+		videoReader.GetFrameDetails();
+		videoReader.AllocateFrameMemory();
+
+	}
+
+	private async Task PlayFile()
+	{
+
+		await Task.Run(async () =>
+		{
+			long nextTime = 0;
+			long previousTime = 0;
+			while (true)
+			{
+				videoReader.ReadFrame();
+				if (videoReader.Frame.pts == 0)
+					startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+				var ptsInMs = (long)(videoReader.Frame.pts_seconds * 1000);
+				var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+				nextTime = startTime + ptsInMs;
+				if (previousTime == nextTime)
+				{
+					break;
+				}
+
+				previousTime = nextTime;
+
+
+				glView.Invalidate();
+				if (nextTime > now)
+					await Task.Delay((int)(nextTime - now));
+				else
+					await Task.Delay(5);
+
+			}
+
+		});
+		videoReader.Close();
+		videoReader.Dispose();
+	}
+}
