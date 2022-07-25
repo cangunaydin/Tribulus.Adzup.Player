@@ -4,6 +4,6 @@
              x:Class="Tribulus.Adzup.Player.Maui.Controls.PlayerCanvas"
              xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls">
 
-        <skia:SKCanvasView x:Name="skiaView" PaintSurface="skiaView_PaintSurface" >
-        </skia:SKCanvasView>
+        <skia:SKGLView x:Name="skiaView" PaintSurface="skiaView_PaintSurface" >
+        </skia:SKGLView>
 </ContentView>

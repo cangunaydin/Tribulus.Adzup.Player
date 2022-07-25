@@ -15,7 +15,7 @@ namespace Tribulus.Adzup.Player.Maui
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
-                .UseSkiaSharp()
+                .UseSkiaSharp(true)
                 .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {

@@ -13,6 +13,11 @@ public partial class PlayerCanvas : ContentView
     private int _frameHeight;
     private PlaylistFile playlistFilePlaying;
 
+
+
+    private static CancellationTokenSource playingCts;
+    private static Task? playingTask;
+
     public static readonly BindableProperty PlaylistFilesProperty = BindableProperty.Create(nameof(PlaylistFiles),
        typeof(List<PlaylistFile>),
        typeof(PlayerCanvas),
@@ -37,7 +42,14 @@ public partial class PlayerCanvas : ContentView
         {
             if (value)
             {
-                await item.StartPlaying();
+                playingCts = new CancellationTokenSource();
+                playingTask = item.StartPlaying();
+            }
+            else
+            {
+                playingCts.Cancel();
+                await playingTask;
+                playingCts.Dispose();
             }
         }
     }
@@ -52,7 +64,7 @@ public partial class PlayerCanvas : ContentView
         InitializeComponent();
     }
 
-    private void skiaView_PaintSurface(object sender, SkiaSharp.Views.Maui.SKPaintSurfaceEventArgs e)
+    private void skiaView_PaintSurface(object sender, SkiaSharp.Views.Maui.SKPaintGLSurfaceEventArgs e)
     {
         if (_frameBuffer == null)
             return;
@@ -96,22 +108,27 @@ public partial class PlayerCanvas : ContentView
     }
     private async Task StartPlaying()
     {
-        while (true)
+        while (!playingCts.Token.IsCancellationRequested)
         {
             foreach (var playlistFile in PlaylistFiles)
             {
                 playlistFilePlaying = playlistFile;
                 if (playlistFile.Type == PlaylistFileType.Image)
+                {
                     await PlayImageFile(playlistFile);
+                }
                 else if (playlistFile.Type == PlaylistFileType.Video)
+                {
                     await PlayVideoFile(playlistFile);
+                }
+
 
             }
         }
     }
     private async Task PlayVideoFile(PlaylistFile playlistFile)
     {
-        long startTime = 0;
+
         var videoReader = new VideoReader();
         videoReader.SetFilepath(playlistFile.Path);
         var success = videoReader.Open();
@@ -121,52 +138,55 @@ public partial class PlayerCanvas : ContentView
         _frameWidth = videoReader.FrameDetails.width;
         _frameHeight = videoReader.FrameDetails.height;
 
+        await RenderVideo(videoReader);
 
-        await Task.Run(async () =>
-        {
-            long nextTime = 0;
-            long previousTime = 0;
-            while (true)
-            {
-                videoReader.ReadFrame();
-                _frameBuffer = videoReader._frameBuffer;
-
-                if (videoReader.Frame.pts == 0)
-                    startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-                var ptsInMs = (long)(videoReader.Frame.pts_seconds * 1000);
-                var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                nextTime = startTime + ptsInMs;
-                if (previousTime == nextTime || !Play)
-                {
-                    break;
-                }
-
-                previousTime = nextTime;
-
-
-                skiaView.InvalidateSurface();
-                if (nextTime > now)
-                    await Task.Delay((int)(nextTime - now));
-
-
-            }
-
-        });
 
         videoReader.Close();
         videoReader.Dispose();
     }
+    private async Task RenderVideo(VideoReader videoReader)
+    {
+        if (playingCts.Token.IsCancellationRequested)
+        {
+            return;
+        }
+        long startTime = 0;
+        long nextTime = 0;
+        long previousTime = 0;
+        while (!playingCts.Token.IsCancellationRequested)
+        {
+            videoReader.ReadFrame();
+            _frameBuffer = videoReader._frameBuffer;
+            if (videoReader.Frame.pts == 0)
+                startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+            var ptsInMs = (long)(videoReader.Frame.pts_seconds * 1000);
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            nextTime = startTime + ptsInMs;
+            if (previousTime == nextTime)
+            {
+                break;
+            }
+            previousTime = nextTime;
+            skiaView.InvalidateSurface();
+            if (nextTime > now)
+                await Task.Delay((int)(nextTime - now));
+        }
+    }
     private async Task PlayImageFile(PlaylistFile playlistFile)
     {
-        //long startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         _frameBuffer = await File.ReadAllBytesAsync(playlistFile.Path);
         skiaView.InvalidateSurface();
-        await Task.Delay(playlistFile.Duration);
+        try
+        {
+            await Task.Delay(playlistFile.Duration, playingCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
 
     }
-
 
 }
