@@ -3,7 +3,11 @@ using Android.Runtime;
 
 namespace Tribulus.Adzup.Player.Maui
 {
-    [Application]
+#if DEBUG
+    [Application(UsesCleartextTraffic = true)]  // connect to local service
+#else                                       // on the host for debugging,
+[Application]                               // access via http://10.0.2.2
+#endif
     public class MainApplication : MauiApplication
     {
         public MainApplication(IntPtr handle, JniHandleOwnership ownership)

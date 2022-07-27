@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Tribulus.Adzup.Player.Maui.PeriodicTasks
+namespace Tribulus.Adzup.Player.Shared.PeriodicTask
 {
     public abstract class BackgroundTask
     {
         private readonly PeriodicTimer _timer;
-        private readonly CancellationTokenSource _cts = new();
+        private CancellationTokenSource _cts = new();
         private Task? _timerTask;
 
         protected BackgroundTask(TimeSpan timeInterval)
@@ -18,7 +18,15 @@ namespace Tribulus.Adzup.Player.Maui.PeriodicTasks
         }
         public void Start()
         {
+            CreateNewCts();
             _timerTask = DoWorkMainAsync();
+        }
+        private void CreateNewCts()
+        {
+            if (_cts==null)
+            {
+                _cts = new();
+            }
         }
         public async Task DoWorkMainAsync()
         {
@@ -43,6 +51,7 @@ namespace Tribulus.Adzup.Player.Maui.PeriodicTasks
             _cts.Cancel();
             await _timerTask;
             _cts.Dispose();
+            _cts = null;
         }
     }
 }

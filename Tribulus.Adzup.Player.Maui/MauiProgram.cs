@@ -1,10 +1,10 @@
 ﻿using CommunityToolkit.Maui;
-using Tribulus.Adzup.Player.Maui.Service;
+using SkiaSharp.Views.Maui.Controls.Hosting;
+using Tribulus.Adzup.Player.Maui.PeriodicTask;
 using Tribulus.Adzup.Player.Maui.View;
 using Tribulus.Adzup.Player.Maui.ViewModel;
-using SkiaSharp.Views.Maui.Controls.Hosting;
-using Tribulus.Adzup.Player.FFmpeg;
-using Tribulus.Adzup.Player.Maui.PeriodicTasks;
+using Tribulus.Adzup.Player.Shared.IO;
+using Tribulus.Adzup.Player.Shared.Service;
 
 namespace Tribulus.Adzup.Player.Maui
 {
@@ -26,6 +26,7 @@ namespace Tribulus.Adzup.Player.Maui
             builder.Services.AddSingleton<PlayerViewModel>();
             builder.Services.AddSingleton<PlayerService>();
             builder.Services.AddSingleton<PlayerTask>();
+            builder.Services.AddSingleton<Storage>();
 
             
 

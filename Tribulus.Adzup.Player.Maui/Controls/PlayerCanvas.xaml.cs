@@ -1,7 +1,7 @@
 
 using SkiaSharp;
 using Tribulus.Adzup.Player.FFmpeg;
-using Tribulus.Adzup.Player.Maui.Model;
+using Tribulus.Adzup.Player.Shared.Model;
 
 namespace Tribulus.Adzup.Player.Maui.Controls;
 
@@ -18,6 +18,8 @@ public partial class PlayerCanvas : ContentView
     private static CancellationTokenSource playingCts;
     private static Task? playingTask;
 
+    #region <PlaylistFiles>
+
     public static readonly BindableProperty PlaylistFilesProperty = BindableProperty.Create(nameof(PlaylistFiles),
        typeof(List<PlaylistFile>),
        typeof(PlayerCanvas),
@@ -28,8 +30,12 @@ public partial class PlayerCanvas : ContentView
         set => SetValue(PlaylistFilesProperty, value);
     }
 
-    public static BindableProperty PlayProperty = BindableProperty.Create(nameof(Play), typeof(bool), typeof(PlayerCanvas), false, propertyChanged: OnPlayChanged);
 
+    #endregion
+
+    #region <Play>
+    public static BindableProperty PlayProperty = BindableProperty.Create(nameof(Play), typeof(bool), typeof(PlayerCanvas), false, propertyChanged: OnPlayChanged);
+   
     private static async void OnPlayChanged(BindableObject bindable, object oldValue, object newValue)
     {
         if (!(bindable is PlayerCanvas item))
@@ -42,23 +48,55 @@ public partial class PlayerCanvas : ContentView
         {
             if (value)
             {
+                await StopPlaying();
                 playingCts = new CancellationTokenSource();
                 playingTask = item.StartPlaying();
             }
-            else
+        }
+    }
+    public bool Play
+    {
+        get => (bool)GetValue(PlayProperty);
+        set => SetValue(PlayProperty, value);
+    }
+    #endregion
+
+    #region <Stop>
+    public static BindableProperty StopProperty = BindableProperty.Create(nameof(Stop), typeof(bool), typeof(PlayerCanvas), false, propertyChanged: OnStopChanged);
+    private static async void OnStopChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (!(bindable is PlayerCanvas item))
+        {
+            return;
+        }
+
+
+        if (newValue is bool value)
+        {
+            if (value)
             {
-                playingCts.Cancel();
-                await playingTask;
-                playingCts.Dispose();
+                await StopPlaying();
             }
         }
     }
-
-    public bool Play
+    public static async Task StopPlaying()
     {
-        get => (bool)GetValue(IsVisibleProperty);
-        set => SetValue(IsVisibleProperty, value);
+        if (playingCts != null)
+        {
+            playingCts.Cancel();
+            await playingTask;
+            playingCts.Dispose();
+            playingCts=null;
+        }
     }
+
+    public bool Stop
+    {
+        get => (bool)GetValue(StopProperty);
+        set => SetValue(StopProperty, value);
+    }
+
+    #endregion
     public PlayerCanvas()
     {
         InitializeComponent();
@@ -185,8 +223,6 @@ public partial class PlayerCanvas : ContentView
         {
             return;
         }
-
-
     }
 
 }

@@ -10,6 +10,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tribulus.Adzup.Player.Maui"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tribulus.Adzup.Player.FFmpegVideoReader.Native", "Tribulus.Adzup.Player.FFmpegVideoReader.Native\Tribulus.Adzup.Player.FFmpegVideoReader.Native.vcxproj", "{C23C74F6-DFA7-46EC-B419-C99BEF5CFAC1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tribulus.Adzup.Player.Shared", "Tribulus.Adzup.Player.Shared\Tribulus.Adzup.Player.Shared.csproj", "{750BA37C-1400-4B52-B717-C94006058A47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -74,6 +76,18 @@ Global
 		{C23C74F6-DFA7-46EC-B419-C99BEF5CFAC1}.Release|x64.Build.0 = Release|x64
 		{C23C74F6-DFA7-46EC-B419-C99BEF5CFAC1}.Release|x86.ActiveCfg = Release|Win32
 		{C23C74F6-DFA7-46EC-B419-C99BEF5CFAC1}.Release|x86.Build.0 = Release|Win32
+		{750BA37C-1400-4B52-B717-C94006058A47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Debug|x64.Build.0 = Debug|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Debug|x86.Build.0 = Debug|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Release|x64.ActiveCfg = Release|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Release|x64.Build.0 = Release|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Release|x86.ActiveCfg = Release|Any CPU
+		{750BA37C-1400-4B52-B717-C94006058A47}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,26 +5,12 @@
 @using SkiaSharp.Views.Blazor
 @using System.IO
 @using Tribulus.Adzup.Player.FFmpeg
+@using Tribulus.Adzup.Player.Shared.Model
 
 <h3>Player</h3>
 
-<div class="row mb-2">
-	<div class="col">
-		<InputFile OnChange="@LoadFiles" multiple />
-	</div>
-</div>
-<div class="row mb-2">
-	<div class="col align-content-center">
-		@if (@videoReader != null && @videoReader.ReadyToReadFrame)
-		{
-			<button @onclick="PlayFile">Play File</button>
-		}
 
-		<button @onclick="CloseFile">Close File</button>
-	</div>
-
-</div>
-<div class="row mb-2">
+@*<div class="row mb-2">
 	<div class="col">
 		@if (@videoReader != null && @videoReader.ReadyToReadFrame)
 		{
@@ -33,102 +19,157 @@
 
 		}
 	</div>
-</div>
+</div>*@
 <div class="row mb-2">
-	<div class="col border p-2 canvas-container">
+    <div class="col border p-2 canvas-container">
 
-		<SKGLView @ref="glView" OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="false" />
+        <SKGLView @ref="skiaView" OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="false" />
 
-	</div>
+    </div>
 </div>
 
 
 @code {
-	private SKGLView glView;
-	long lastTick = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-	long startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-
-	VideoReader videoReader;
-	FrameDetails frameDetails;
-
-	void CloseFile()
-	{
-		videoReader.Close();
-	}
-	void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
-	{
-		if (videoReader == null || !videoReader.ReadyToReadFrame)
-			return;
-
-		// the the canvas and properties
-		var canvas = e.Surface.Canvas;
-		// make sure the canvas is blank
-		canvas.Clear(SKColors.White);
+    private SKGLView? skiaView;
+    private byte[]? _frameBuffer;
+    private int _frameWidth;
+    private int _frameHeight;
+    private PlaylistFile? playlistFilePlaying;
+    private List<PlaylistFile> playlistFiles=new();
 
 
 
-		using (var data = SKData.CreateCopy(videoReader.FrameBuffer))
-		using (var original = new SKBitmap())
-		{
-			// create a new bitmap using the memory
-			original.InstallPixels(new SKImageInfo(videoReader.FrameDetails.width, videoReader.FrameDetails.height), data.Data);
-
-			using (var resized = original.Resize(new SKImageInfo(1280, 720), SKFilterQuality.Medium))
-			{
-				canvas.DrawBitmap(resized, 0, 0);
-			}
-		}
-
-	}
+    private static CancellationTokenSource playingCts=new();
+    private static Task? playingTask;
 
 
-	private async Task LoadFiles(InputFileChangeEventArgs e)
-	{
-		videoReader = new VideoReader();
-		IBrowserFile file = e.File;
-		var videoFileBuffers = new byte[file.Size];
-		await file.OpenReadStream(maxAllowedSize: 104857600).ReadAsync(videoFileBuffers);
-		videoReader.SaveFile(videoFileBuffers, e.File.Name);
-		videoReader.Open();
-		videoReader.GetFrameDetails();
-		videoReader.AllocateFrameMemory();
+    protected override Task OnInitializedAsync()
+    {
+        return base.OnInitializedAsync();
 
-	}
+    }
+    void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
+    {
+        if (_frameBuffer == null)
+            return;
+        // the the canvas and properties
+        var canvas = e.Surface.Canvas;
+        // make sure the canvas is blank
 
-	private async Task PlayFile()
-	{
+        canvas.Clear(SKColors.White);
+        var canvasWidth = canvas.DeviceClipBounds.Width;
+        var canvasHeight = canvas.DeviceClipBounds.Height;
+        if (playlistFilePlaying.Type == PlaylistFileType.Video)
+        {
+            using (var data = SKData.CreateCopy(_frameBuffer))
+            using (var original = new SKBitmap())
+            {
+                // create a new bitmap using the memory
+                original.InstallPixels(new SKImageInfo(_frameWidth, _frameHeight, SKColorType.Rgba8888), data.Data);
+                using (var resized = original.Resize(new SKImageInfo(canvasWidth, canvasHeight), SKFilterQuality.Medium))
+                {
+                    canvas.DrawBitmap(resized, 0, 0);
+                }
+            }
+        }
+        else if (playlistFilePlaying.Type == PlaylistFileType.Image)
+        {
+            using (var image = SKBitmap.Decode(_frameBuffer))
+            {
+                canvas.DrawBitmap(image, 0, 0);
+            }
 
-		await Task.Run(async () =>
-		{
-			long nextTime = 0;
-			long previousTime = 0;
-			while (true)
-			{
-				videoReader.ReadFrame();
-				if (videoReader.Frame.pts == 0)
-					startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        }
+        using (var paint = new SKPaint())
+        {
+            paint.TextSize = 32.0f;
+            paint.IsAntialias = true;
+            paint.Color = new SKColor(124, 252, 0);
+            paint.IsStroke = false;
 
-				var ptsInMs = (long)(videoReader.Frame.pts_seconds * 1000);
-				var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-				nextTime = startTime + ptsInMs;
-				if (previousTime == nextTime)
-				{
-					break;
-				}
+            canvas.DrawText(playlistFilePlaying.Name, 0, canvasHeight - 64.0f, paint);
+        }
 
-				previousTime = nextTime;
+    }
+
+    private async Task StartPlaying()
+    {
+        while (!playingCts.Token.IsCancellationRequested)
+        {
+            foreach (var playlistFile in playlistFiles)
+            {
+                playlistFilePlaying = playlistFile;
+                if (playlistFile.Type == PlaylistFileType.Image)
+                {
+                    await PlayImageFile(playlistFile);
+                }
+                else if (playlistFile.Type == PlaylistFileType.Video)
+                {
+                    await PlayVideoFile(playlistFile);
+                }
 
 
-				glView.Invalidate();
-				if (nextTime > now)
-					await Task.Delay((int)(nextTime - now));
-				else
-					await Task.Delay(5);
+            }
+        }
+    }
+    private async Task PlayVideoFile(PlaylistFile playlistFile)
+    {
 
-			}
+        var videoReader = new VideoReader();
+        //videoReader.SetFilepath(playlistFile.Path);
+        var success = videoReader.Open();
+        videoReader.GetFrameDetails();
+        videoReader.AllocateFrameMemory();
 
-		});
-		videoReader.Close();
-		videoReader.Dispose();
-	}
+        _frameWidth = videoReader.FrameDetails.width;
+        _frameHeight = videoReader.FrameDetails.height;
+
+        await RenderVideo(videoReader);
+
+
+        videoReader.Close();
+        videoReader.Dispose();
+    }
+    private async Task RenderVideo(VideoReader videoReader)
+    {
+        if (playingCts.Token.IsCancellationRequested)
+        {
+            return;
+        }
+        long startTime = 0;
+        long nextTime = 0;
+        long previousTime = 0;
+        while (!playingCts.Token.IsCancellationRequested)
+        {
+            videoReader.ReadFrame();
+            _frameBuffer = videoReader._frameBuffer;
+            if (videoReader.Frame.pts == 0)
+                startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+            var ptsInMs = (long)(videoReader.Frame.pts_seconds * 1000);
+            var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            nextTime = startTime + ptsInMs;
+            if (previousTime == nextTime)
+            {
+                break;
+            }
+            previousTime = nextTime;
+            skiaView.Invalidate();
+            if (nextTime > now)
+                await Task.Delay((int)(nextTime - now));
+        }
+    }
+    private async Task PlayImageFile(PlaylistFile playlistFile)
+    {
+        _frameBuffer = await File.ReadAllBytesAsync(playlistFile.Path);
+        skiaView.Invalidate();
+        try
+        {
+            await Task.Delay(playlistFile.Duration, playingCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+    }
 }

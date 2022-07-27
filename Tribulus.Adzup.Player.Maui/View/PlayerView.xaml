@@ -8,7 +8,8 @@
              x:DataType="viewmodel:PlayerViewModel"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              Title="PlayerView">
-    <controls:PlayerCanvas PlaylistFiles="{Binding PlaylistFiles}" Play="{Binding Play}"  
+    <controls:PlayerCanvas x:Name="playerCanvas" PlaylistFiles="{Binding PlaylistFiles}" Play="{Binding Play}"
+                           Stop="{Binding Stop}"
                            HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand">
     </controls:PlayerCanvas>
 

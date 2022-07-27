@@ -59,6 +59,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Tribulus.Adzup.Player.FFmpeg\Tribulus.Adzup.Player.FFmpeg.csproj" />
+    <ProjectReference Include="..\Tribulus.Adzup.Player.Shared\Tribulus.Adzup.Player.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>
