@@ -8,7 +8,6 @@ namespace Tribulus.Adzup.Player.Maui.PeriodicTask;
 
 public class PlayerTask : BackgroundTask
 {
-    public static string MessagingKey = "PlaylistChanged";
     public event Action<List<PlaylistFile>> OnPlaylistChanged;
 
     private const int _timeInterval = 30000; //ms
@@ -31,7 +30,6 @@ public class PlayerTask : BackgroundTask
             var filesDirPath = _storage.CreateDirectory(appDataDir);
 
             await _storage.CreateNewPlaylistFiles(latestPlaylistFiles, filesDirPath);
-            //MessagingCenter.Send(this, MessagingKey, latestPlaylistFiles);
             NotifyStateChanged(latestPlaylistFiles);
             //delete files that is not necessary anymore after some time.
             await Task.Delay(1000);

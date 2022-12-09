@@ -43,6 +43,11 @@ public:
 		fp.open(fileNameStr, std::ios::out | std::ios::binary);
 		fp.write((char*)fileBytes, length);
 	}
+	int deleteFile(char* filename)
+	{
+		int result = remove(filename);
+		return result;
+	}
 	void getFrameDetails(FrameDetails* frameDetails) {
 		frameDetails->width = width;
 		frameDetails->height = height;
@@ -202,6 +207,10 @@ extern "C" {
 	void video_reader_savefile(void* obj, uint8_t* file_bytes, int file_length, char* filename)
 	{
 		((VideoReader*)obj)->saveFile(file_bytes, file_length, filename);
+	}
+	int video_reader_deletefile(void* obj, char* filename)
+	{
+		return ((VideoReader*)obj)->deleteFile(filename);
 	}
 	int video_reader_open(void* obj, char* filename)
 	{

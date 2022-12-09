@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Tribulus.Adzup.Player.Blazor;
+using Tribulus.Adzup.Player.Blazor.PeriodicTask;
 using Tribulus.Adzup.Player.Shared.IO;
 using Tribulus.Adzup.Player.Shared.Service;
 
@@ -11,5 +12,6 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddSingleton<PlayerService>();
 builder.Services.AddSingleton<Storage>();
+builder.Services.AddSingleton<PlayerTask>();
 
 await builder.Build().RunAsync();

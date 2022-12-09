@@ -143,6 +143,10 @@ namespace Tribulus.Adzup.Player.FFmpeg
 
             return VideoReaderApi.video_reader_open(_handle, Filepath);
         }
+        public int DeleteFile(string filename)
+        {
+            return VideoReaderApi.video_reader_deletefile(_handle, filename);
+        }
         
         public void GetFrameDetails()
         {

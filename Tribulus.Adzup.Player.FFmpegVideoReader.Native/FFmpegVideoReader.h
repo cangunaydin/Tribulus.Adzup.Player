@@ -45,6 +45,7 @@ public:
 	AVRational time_base;
 
 	virtual void saveFile(uint8_t* fileBytes, int length, char* filename) = 0;
+	virtual int deleteFile(char* filename) = 0;
 	virtual void getFrameDetails(FrameDetails* frameDetails) = 0;
 	virtual int open(const char* filename) = 0;
 	virtual int readFrame(Frame* frame) = 0;

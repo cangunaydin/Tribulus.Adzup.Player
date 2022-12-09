@@ -4,10 +4,12 @@
 @using SkiaSharp
 @using SkiaSharp.Views.Blazor
 @using System.IO
+@using Tribulus.Adzup.Player.Blazor.PeriodicTask
 @using Tribulus.Adzup.Player.FFmpeg
 @using Tribulus.Adzup.Player.Shared.Model
+@inject PlayerTask playerTask
 
-<h3>Player</h3>
+@*<h3>Player</h3>*@
 
 
 @*<div class="row mb-2">
@@ -20,12 +22,10 @@
 		}
 	</div>
 </div>*@
-<div class="row mb-2">
-    <div class="col border p-2 canvas-container">
+<div class="canvas-container">
 
-        <SKGLView @ref="skiaView" OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="false" />
+    <SKGLView @ref="skiaView" OnPaintSurface="OnPaintSurface" IgnorePixelScaling="true" EnableRenderLoop="false" />
 
-    </div>
 </div>
 
 
@@ -35,22 +35,46 @@
     private int _frameWidth;
     private int _frameHeight;
     private PlaylistFile? playlistFilePlaying;
-    private List<PlaylistFile> playlistFiles=new();
+    private List<PlaylistFile> playlistFiles = new();
 
 
 
-    private static CancellationTokenSource playingCts=new();
-    private static Task? playingTask;
+    private CancellationTokenSource playingCts = new();
+    private Task? playingTask;
 
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        return base.OnInitializedAsync();
+        playerTask.OnPlaylistChanged += ChangePlaylist;
+        playerTask.Start();
 
+        await playerTask.DoWorkAsync();
+
+    }
+    async void ChangePlaylist(List<PlaylistFile> playlistFiles)
+    {
+        await StopPlaying();
+        this.playlistFiles = playlistFiles;
+        playingCts = new CancellationTokenSource();
+        playingTask = StartPlaying();
+
+    }
+    async Task StopPlaying()
+    {
+        if (playingCts != null)
+        {
+            playingCts.Cancel();
+            if (playingTask != null)
+                await playingTask;
+            playingCts.Dispose();
+            playingCts = null;
+        }
     }
     void OnPaintSurface(SKPaintGLSurfaceEventArgs e)
     {
         if (_frameBuffer == null)
+            return;
+        if (playlistFilePlaying == null)
             return;
         // the the canvas and properties
         var canvas = e.Surface.Canvas;
@@ -59,6 +83,7 @@
         canvas.Clear(SKColors.White);
         var canvasWidth = canvas.DeviceClipBounds.Width;
         var canvasHeight = canvas.DeviceClipBounds.Height;
+
         if (playlistFilePlaying.Type == PlaylistFileType.Video)
         {
             using (var data = SKData.CreateCopy(_frameBuffer))
@@ -116,7 +141,7 @@
     {
 
         var videoReader = new VideoReader();
-        //videoReader.SetFilepath(playlistFile.Path);
+        videoReader.SetFilepath(playlistFile.Path);
         var success = videoReader.Open();
         videoReader.GetFrameDetails();
         videoReader.AllocateFrameMemory();
@@ -161,7 +186,7 @@
     }
     private async Task PlayImageFile(PlaylistFile playlistFile)
     {
-        _frameBuffer = await File.ReadAllBytesAsync(playlistFile.Path);
+        _frameBuffer = playlistFile.FileBytes;
         skiaView.Invalidate();
         try
         {

@@ -23,6 +23,9 @@ namespace Tribulus.Adzup.Player.FFmpeg
         public extern static void video_reader_savefile(nint obj, IntPtr file_bytes, int file_length, string filename);
 
         [DllImport("FFmpegVideoReader")]
+        public extern static int video_reader_deletefile(nint obj, string filename);
+
+        [DllImport("FFmpegVideoReader")]
         public extern static int video_reader_open(nint obj, string filename);
 
         [DllImport("FFmpegVideoReader")]
